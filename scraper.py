@@ -21,11 +21,31 @@ class AljaridaScraper:
         # AWS S3 configuration
         self.bucket_name = bucket_name
         if aws_access_key and aws_secret_key:
+            print(f"\nInitializing S3 client...")
+            print(f"Access Key: {aws_access_key[:8]}...{aws_access_key[-4:]}")
+            print(f"Secret Key: {aws_secret_key[:4]}...{aws_secret_key[-4:]}")
+            print(f"Bucket: {bucket_name}")
+            
             self.s3_client = boto3.client(
                 's3',
                 aws_access_key_id=aws_access_key,
                 aws_secret_access_key=aws_secret_key
             )
+            
+            # Test the connection
+            try:
+                print("\nTesting S3 connection...")
+                # Try to get bucket location
+                response = self.s3_client.head_bucket(Bucket=bucket_name)
+                print(f"✓ Successfully connected to S3 bucket: {bucket_name}")
+            except Exception as e:
+                print(f"✗ Failed to connect to S3: {e}")
+                print(f"\nThis means your AWS credentials are invalid or don't have access to this bucket.")
+                print(f"Please check:")
+                print(f"1. The AWS Access Key exists in IAM (not deleted/deactivated)")
+                print(f"2. The Secret Key matches the Access Key")
+                print(f"3. The IAM user has s3:PutObject permission for bucket '{bucket_name}'")
+                raise
         else:
             self.s3_client = None
         
@@ -190,6 +210,7 @@ class AljaridaScraper:
         excel_buffer.seek(0)
         
         try:
+            print(f"Uploading to s3://{self.bucket_name}/{s3_key}...")
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=s3_key,
@@ -199,7 +220,23 @@ class AljaridaScraper:
             print(f"✓ Uploaded to S3: s3://{self.bucket_name}/{s3_key}")
             return True
         except Exception as e:
-            print(f"✗ Error uploading to S3: {e}")
+            print(f"\n✗ Error uploading to S3: {e}")
+            print(f"\nDebugging info:")
+            print(f"  Bucket: {self.bucket_name}")
+            print(f"  Key: {s3_key}")
+            print(f"  File size: {len(excel_buffer.getvalue())} bytes")
+            
+            # Try to get more info about the error
+            if 'InvalidAccessKeyId' in str(e):
+                print(f"\n⚠️  Your AWS Access Key ID is INVALID or DELETED.")
+                print(f"   Go to AWS IAM Console → Users → Security Credentials")
+                print(f"   and verify the access key exists and is Active.")
+            elif 'SignatureDoesNotMatch' in str(e):
+                print(f"\n⚠️  Your AWS Secret Access Key is INCORRECT.")
+                print(f"   The secret key doesn't match the access key.")
+            elif 'NoSuchBucket' in str(e):
+                print(f"\n⚠️  S3 bucket '{self.bucket_name}' does not exist.")
+            
             return False
     
     def scrape_and_upload(self, start_date, end_date=None):
