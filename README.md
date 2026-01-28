@@ -110,11 +110,76 @@ Each `data.xlsx` file contains three columns:
 
 ## Troubleshooting
 
+### ✗ Error: "InvalidAccessKeyId - The AWS Access Key Id you provided does not exist in our records"
+
+This error means GitHub Actions cannot access your AWS credentials. Try these steps:
+
+#### Step 1: Verify Secret Names Match Exactly
+
+In your GitHub repository, go to **Settings → Secrets and variables → Actions** and ensure you have:
+- `AWS_ACCESS_KEY_ID` (not aws_access_key_id or AWS_ACCESS_KEY)
+- `AWS_SECRET_ACCESS_KEY` (not aws_secret_access_key)
+- `S3_BUCKET_NAME` (not s3_bucket_name or BUCKET_NAME)
+
+Secret names are **case-sensitive** and must match exactly!
+
+#### Step 2: Check for Extra Whitespace
+
+When adding secrets:
+1. Copy the value
+2. Paste into a text editor first
+3. Remove any spaces or newlines at the beginning/end
+4. Then paste into GitHub secrets
+
+#### Step 3: Verify AWS Credentials Are Valid
+
+Test your credentials locally:
+
+```powershell
+# PowerShell
+$env:AWS_ACCESS_KEY_ID="your_actual_key"
+$env:AWS_SECRET_ACCESS_KEY="your_actual_secret"
+$env:S3_BUCKET_NAME="your_bucket"
+
+# Test AWS connection
+pip install boto3
+python -c "import boto3; s3 = boto3.client('s3'); print('Buckets:', [b['Name'] for b in s3.list_buckets()['Buckets']])"
+```
+
+If this fails locally, your AWS credentials are incorrect.
+
+#### Step 4: Check IAM Permissions
+
+Your AWS user/role needs these permissions:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:PutObjectAcl"
+      ],
+      "Resource": "arn:aws:s3:::your-bucket-name/*"
+    }
+  ]
+}
+```
+
+#### Step 5: Re-create the Secrets
+
+Sometimes secrets get corrupted. Delete and recreate them:
+1. Go to **Settings → Secrets and variables → Actions**
+2. Click on each secret → **Remove**
+3. Add them again with **New repository secret**
+
 ### GitHub Actions Failing?
 
 - Check that all three secrets are properly set
 - Verify S3 bucket exists and credentials have write permissions
 - View logs in Actions tab for detailed error messages
+- Check the "Verify AWS Secrets" step in the workflow logs
 
 ### Local Testing Issues?
 

@@ -260,6 +260,27 @@ if __name__ == "__main__":
     AWS_SECRET_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
     
+    # Validate credentials are set
+    if not AWS_ACCESS_KEY:
+        print("ERROR: AWS_ACCESS_KEY_ID environment variable is not set!")
+        print("Make sure GitHub secrets are configured correctly.")
+        sys.exit(1)
+    
+    if not AWS_SECRET_KEY:
+        print("ERROR: AWS_SECRET_ACCESS_KEY environment variable is not set!")
+        print("Make sure GitHub secrets are configured correctly.")
+        sys.exit(1)
+    
+    if not BUCKET_NAME:
+        print("ERROR: S3_BUCKET_NAME environment variable is not set!")
+        print("Make sure GitHub secrets are configured correctly.")
+        sys.exit(1)
+    
+    # Strip any whitespace that might have been added
+    AWS_ACCESS_KEY = AWS_ACCESS_KEY.strip()
+    AWS_SECRET_KEY = AWS_SECRET_KEY.strip()
+    BUCKET_NAME = BUCKET_NAME.strip()
+    
     # Date range configuration
     START_DATE = datetime(2007, 6, 2)
     END_DATE = datetime.now()
@@ -280,6 +301,7 @@ if __name__ == "__main__":
     print(f"Starting scraper...")
     print(f"Date range: {START_DATE.strftime('%Y-%m-%d')} to {END_DATE.strftime('%Y-%m-%d')}")
     print(f"S3 Bucket: {BUCKET_NAME}")
+    print(f"AWS Access Key: {AWS_ACCESS_KEY[:4]}...{AWS_ACCESS_KEY[-4:]}")
     
     # Initialize scraper
     scraper = AljaridaScraper(

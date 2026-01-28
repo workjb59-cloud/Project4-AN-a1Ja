@@ -35,6 +35,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Verify AWS Secrets
+        run: |
+          echo "Checking if AWS secrets are set..."
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "ERROR: AWS_ACCESS_KEY_ID secret is not set!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "ERROR: AWS_SECRET_ACCESS_KEY secret is not set!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.S3_BUCKET_NAME }}" ]; then
+            echo "ERROR: S3_BUCKET_NAME secret is not set!"
+            exit 1
+          fi
+          echo "✓ All AWS secrets are configured"
+          echo "✓ Access Key ID starts with: $(echo '${{ secrets.AWS_ACCESS_KEY_ID }}' | cut -c1-4)..."
+          echo "✓ Bucket name: ${{ secrets.S3_BUCKET_NAME }}"
+      
       - name: Run scraper
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
