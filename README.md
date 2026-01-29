@@ -139,7 +139,7 @@ GitHub Actions has a **6-hour maximum** per workflow run. Both scrapers handle t
 
 ### Environment Variables (configured in workflows):
 
-- `MAX_DAYS_PER_RUN`: Maximum days to process (default: 30 for articles, 50 for PDFs)
+- `MAX_DAYS_PER_RUN`: Maximum days to process (default: 30 for articles, 5000 for PDFs)
 - `MAX_RUNTIME_MINUTES`: Maximum runtime in minutes (default: 330 = 5.5 hours)
 - `USE_CHECKPOINT`: Enable checkpoint resuming (default: 1)
 

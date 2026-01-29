@@ -60,7 +60,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-          MAX_DAYS_PER_RUN: 50
+          MAX_DAYS_PER_RUN: 5000
           MAX_RUNTIME_MINUTES: 330
           USE_CHECKPOINT: 1
         run: |

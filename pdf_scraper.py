@@ -307,7 +307,7 @@ if __name__ == "__main__":
     BUCKET_NAME = BUCKET_NAME.strip()
     
     # Runtime limits for GitHub Actions (6 hour limit, use 5.5 hours to be safe)
-    MAX_DAYS_PER_RUN = int(os.getenv("MAX_DAYS_PER_RUN", "50"))
+    MAX_DAYS_PER_RUN = int(os.getenv("MAX_DAYS_PER_RUN", "5000"))
     MAX_RUNTIME_MINUTES = int(os.getenv("MAX_RUNTIME_MINUTES", "330"))
     USE_CHECKPOINT = os.getenv("USE_CHECKPOINT", "1") == "1"
     
