@@ -5,13 +5,13 @@ on:
   workflow_dispatch:
     inputs:
       start_date:
-        description: 'Start date (YYYY-MM-DD)'
-        required: false
-        default: '2007-06-02'
-      end_date:
-        description: 'End date (YYYY-MM-DD)'
+        description: 'Start date (YYYY-MM-DD) - defaults to TODAY'
         required: false
         default: ''
+      end_date:
+        description: 'End date (YYYY-MM-DD) - defaults to 2007-06-02'
+        required: false
+        default: '2007-06-02'
   
   # Schedule to run daily at 3 AM UTC (optional - runs PDFs after articles)
   schedule:

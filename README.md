@@ -55,6 +55,9 @@ Make sure your S3 bucket is created and your AWS credentials have permissions to
 2. Select **"Scrape Aljarida PDF Archive"** workflow
 3. Click **"Run workflow"**
 4. Optional: Specify custom date range
+   - Start date: Leave empty for today (default)
+   - End date: `2007-06-02` (earliest date, default)
+   - **Note**: PDFs are scraped **backwards** (today → 2007) to prioritize recent content
 
 #### Option 2: Scheduled Run
 
@@ -115,7 +118,19 @@ s3://your-bucket/
 6. **Checkpointing**: Saves progress to S3 for resuming
 
 ### PDF Scraper (`pdf_scraper.py`)
-1 second delay between PDF downloads
+
+1. **Month Index Scraping**: Fetches PDF list from `https://www.aljarida.com/الأعداد-السابقة?monthFilter=YYYY-MM`
+2. **Backwards Processing**: Starts from **today** and goes back to 2007 (prioritizes recent PDFs)
+3. **Month Caching**: Caches month pages to avoid re-fetching when processing consecutive days
+4. **PDF Download**: Downloads PDF files directly from the website
+5. **S3 Upload**: Uploads PDFs to `aljarida/year=YYYY/month=MM/day=DD/magazinepdf/`
+6. **Checkpointing**: Saves oldest processed date, resumes going further back each run
+
+## Rate Limiting
+
+- 1 second delay between articles
+- 2 second delay between days
+- 1 second delay between PDF downloads
 - Automatic retry with exponential backoff on failures
 
 ## GitHub Actions Runtime Limits

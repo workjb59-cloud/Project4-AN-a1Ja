@@ -200,9 +200,9 @@ class AljaridaPDFScraper:
             print(f"Warning: failed to update checkpoint: {e}")
     
     def scrape_and_upload(self, start_date, end_date=None, max_days_per_run=50, max_runtime_minutes=330):
-        """Scrape PDFs and upload to S3 with runtime limits"""
+        """Scrape PDFs and upload to S3 with runtime limits - Goes BACKWARDS from recent to old"""
         if end_date is None:
-            end_date = datetime.now()
+            end_date = datetime(2007, 6, 2)  # Earliest date
         
         current_date = start_date
         total_uploaded = 0
@@ -211,13 +211,14 @@ class AljaridaPDFScraper:
         started_at = time.time()
         
         print(f"\n{'='*60}")
-        print(f"PDF Scraper Started")
-        print(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        print(f"PDF Scraper Started (BACKWARDS: recent → old)")
+        print(f"Starting from: {start_date.strftime('%Y-%m-%d')}")
+        print(f"Going back to: {end_date.strftime('%Y-%m-%d')}")
         print(f"Max days per run: {max_days_per_run}")
         print(f"Max runtime: {max_runtime_minutes} minutes")
         print(f"{'='*60}\n")
         
-        while current_date <= end_date:
+        while current_date >= end_date:
             try:
                 # Check runtime and day limits
                 elapsed_minutes = (time.time() - started_at) / 60
@@ -260,8 +261,8 @@ class AljaridaPDFScraper:
                     print(f"No PDF found for {date_str}")
                     total_skipped += 1
                 
-                # Move to next day
-                current_date += timedelta(days=1)
+                # Move to PREVIOUS day (going backwards)
+                current_date -= timedelta(days=1)
                 
                 # Small delay between requests
                 time.sleep(1)
@@ -269,7 +270,7 @@ class AljaridaPDFScraper:
             except Exception as e:
                 print(f"Error processing {current_date}: {e}")
                 total_failed += 1
-                current_date += timedelta(days=1)
+                current_date -= timedelta(days=1)  # Go backwards
                 continue
         
         print(f"\n{'='*60}")
@@ -310,9 +311,9 @@ if __name__ == "__main__":
     MAX_RUNTIME_MINUTES = int(os.getenv("MAX_RUNTIME_MINUTES", "330"))
     USE_CHECKPOINT = os.getenv("USE_CHECKPOINT", "1") == "1"
     
-    # Date range configuration
-    START_DATE = datetime(2007, 6, 2)
-    END_DATE = datetime.now()
+    # Date range configuration - START from TODAY, go BACK to 2007
+    START_DATE = datetime.now()  # Start from today
+    END_DATE = datetime(2007, 6, 2)  # Go back to earliest date
     
     # Allow command line arguments for date range
     if len(sys.argv) >= 2:
@@ -339,11 +340,12 @@ if __name__ == "__main__":
     )
     
     # Resume from checkpoint if enabled and no explicit start date
+    # For backwards scraping, checkpoint is the oldest date we've reached
     if USE_CHECKPOINT and len(sys.argv) < 2:
         checkpoint_date = scraper.get_last_checkpoint_date()
         if checkpoint_date:
-            START_DATE = checkpoint_date + timedelta(days=1)
-            print(f"Resuming from checkpoint: {START_DATE.strftime('%Y-%m-%d')}")
+            START_DATE = checkpoint_date - timedelta(days=1)  # Go one day earlier
+            print(f"Resuming from checkpoint (going backwards): {START_DATE.strftime('%Y-%m-%d')}")
     
     # Run scraper
     scraper.scrape_and_upload(
