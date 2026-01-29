@@ -14,8 +14,8 @@ on:
         default: '2007-06-02'
   
   # Schedule to run daily at 3 AM UTC (optional - runs PDFs after articles)
-  schedule:
-    - cron: '0 3 * * *'
+  # schedule:
+  #   - cron: '0 3 * * *'
 
 jobs:
   scrape-pdf:
