@@ -7,8 +7,10 @@ Automated web scraper for extracting articles from [Aljarida newspaper archive](
 - ✅ Scrapes archive from June 2, 2007 until today
 - ✅ Extracts three columns: **القسم** (Category), **العنوان** (Title), **المحتوى** (Content)
 - ✅ Saves data as Excel files (`.xlsx`)
-- ✅ Partitioned storage in S3: `aljarida/year=YYYY/month=MM/day=DD/data.xlsx`
-- ✅ Automated GitHub Actions workflow
+- ✅ Downloads daily PDF magazine files
+- ✅ Partitioned storage in S3: `aljarida/year=YYYY/month=MM/day=DD/`
+- ✅ Automated GitHub Actions workflows (articles + PDFs)
+- ✅ Checkpointing for long-running scrapes (handles 6-hour GitHub Actions limit)
 - ✅ Respectful rate limiting and retry logic
 - ✅ UTF-8 encoding for Arabic content
 
@@ -40,6 +42,7 @@ Make sure your S3 bucket is created and your AWS credentials have permissions to
 
 #### Option 1: Manual Trigger
 
+**For Articles:**
 1. Go to **Actions** tab in your repository
 2. Select **"Scrape Aljarida Archive"** workflow
 3. Click **"Run workflow"**
@@ -47,9 +50,18 @@ Make sure your S3 bucket is created and your AWS credentials have permissions to
    - Start date: `2007-06-02` (default)
    - End date: Leave empty for today, or specify `YYYY-MM-DD`
 
+**For PDFs:**
+1. Go to **Actions** tab in your repository
+2. Select **"Scrape Aljarida PDF Archive"** workflow
+3. Click **"Run workflow"**
+4. Optional: Specify custom date range
+
 #### Option 2: Scheduled Run
 
-The workflow runs automatically daily at 2 AM UTC (optional, configured in `.github/workflows/scrape.yml`)
+- **Articles**: Run automatically daily at 2 AM UTC
+- **PDFs**: Run automatically daily at 3 AM UTC
+
+Both workflows use checkpointing to resume from where they left off.
 
 ### Local Testing
 
@@ -73,12 +85,19 @@ python scraper.py 2007-06-02 2007-06-10
 ```
 s3://your-bucket/
 └── aljarida/
+    ├── _state/
+    │   ├── last_success_date.txt (checkpoint for articles)
+    │   └── pdf_last_success_date.txt (checkpoint for PDFs)
     ├── year=2007/
     │   └── month=06/
     │       ├── day=02/
-    │       │   └── data.xlsx
+    │       │   ├── data.xlsx
+    │       │   └── magazinepdf/
+    │       │       └── aljarida-20070602-1.pdf
     │       ├── day=03/
-    │       │   └── data.xlsx
+    │       │   ├── data.xlsx
+    │       │   └── magazinepdf/
+    │       │       └── aljarida-20070603-1.pdf
     │       └── ...
     ├── year=2008/
     │   └── ...
@@ -86,11 +105,54 @@ s3://your-bucket/
 ```
 
 ### Excel File Format
+### Article Scraper (`scraper.py`)
 
-Each `data.xlsx` file contains three columns:
+1. **Archive Scraping**: Fetches article list from `https://www.aljarida.com/archive/YYYY/M/D`
+2. **Pagination Handling**: Automatically detects and scrapes all pages (`?pgno=2`, `?pgno=3`, etc.)
+3. **Content Extraction**: For each article, visits the article URL and extracts full content
+4. **Excel Creation**: Creates Excel file with القسم, العنوان, المحتوى columns
+5. **S3 Upload**: Uploads Excel to partitioned path in S3
+6. **Checkpointing**: Saves progress to S3 for resuming
 
-| القسم | العنوان | المحتوى |
-|------|---------|----------|
+### PDF Scraper (`pdf_scraper.py`)
+1 second delay between PDF downloads
+- Automatic retry with exponential backoff on failures
+
+## GitHub Actions Runtime Limits
+
+GitHub Actions has a **6-hour maximum** per workflow run. Both scrapers handle this:
+
+### Environment Variables (configured in workflows):
+
+- `MAX_DAYS_PER_RUN`: Maximum days to process (default: 30 for articles, 50 for PDFs)
+- `MAX_RUNTIME_MINUTES`: Maximum runtime in minutes (default: 330 = 5.5 hours)
+- `USE_CHECKPOINT`: Enable checkpoint resuming (default: 1)
+
+### Checkpoint System
+
+- Progress is saved to S3 after each successful day
+- Articles checkpoint: `aljarida/_state/last_success_date.txt`
+- PDFs checkpoint: `aljarida/_state/pdf_last_success_date.txt`
+- Next run automatically resumes from checkpoint
+- Scheduled workflows gradually catch up to current date
+
+### Running the Full Archive
+
+Due to the 6-hour limit, scraping from 2007 to 2026 will take multiple runs:
+
+1. **Automated approach**: Enable scheduled workflows (recommended)
+   - Runs daily and gradually processes the archive
+   - Takes approximately 2-3 months to complete full archive
+
+2. **Manual approach**: Trigger workflows multiple times
+   - Each run processes ~30-50 days
+   - Monitor progress via workflow logs
+   - Repeat until caught up to current date
+1. **Month Index Scraping**: Fetches PDF list from `https://www.aljarida.com/الأعداد-السابقة?monthFilter=YYYY-MM`
+2. **Month Caching**: Caches month pages to avoid re-fetching when processing consecutive days
+3. **PDF Download**: Downloads PDF files directly from the website
+4. **S3 Upload**: Uploads PDFs to `aljarida/year=YYYY/month=MM/day=DD/magazinepdf/`
+5. **Checkpointing**: Saves progress separately from article scraper
 | أخبار الأولى | Article title... | Full article content... |
 | محليات | Another article... | More content... |
 
