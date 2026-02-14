@@ -142,21 +142,33 @@ class AljaridaPDFScraper:
             
             # Download PDF
             print(f"Downloading PDF: {pdf_url}")
-            response = self.session.get(pdf_url, stream=True, timeout=60)
+            response = self.session.get(pdf_url, timeout=60)
             response.raise_for_status()
             
+            # Get PDF content
+            pdf_content = response.content
+            
+            # Check if content is valid
+            if len(pdf_content) == 0:
+                print(f"✗ Downloaded PDF is empty (0 bytes)")
+                return False
+            
             # Get content size
-            content_length = response.headers.get('Content-Length')
-            size_mb = int(content_length) / (1024 * 1024) if content_length else 0
+            size_mb = len(pdf_content) / (1024 * 1024)
             print(f"PDF size: {size_mb:.2f} MB")
+            
+            # Verify it's actually a PDF file
+            if not pdf_content.startswith(b'%PDF'):
+                print(f"✗ Downloaded file is not a valid PDF (missing PDF header)")
+                return False
             
             # Upload to S3
             print(f"Uploading to s3://{self.bucket_name}/{s3_key}...")
-            self.s3_client.upload_fileobj(
-                response.raw,
-                self.bucket_name,
-                s3_key,
-                ExtraArgs={'ContentType': 'application/pdf'}
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=pdf_content,
+                ContentType='application/pdf'
             )
             
             print(f"✓ Uploaded PDF: s3://{self.bucket_name}/{s3_key}")
