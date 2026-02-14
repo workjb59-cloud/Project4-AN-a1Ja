@@ -214,7 +214,15 @@ class AljaridaPDFScraper:
     def scrape_and_upload(self, start_date, end_date=None, max_days_per_run=50, max_runtime_minutes=330):
         """Scrape PDFs and upload to S3 with runtime limits - Goes BACKWARDS from recent to old"""
         if end_date is None:
-            end_date = datetime(2007, 6, 2)  # Earliest date
+            end_date = datetime(2007, 6, 1)  # Earliest date
+        
+        # Check if we've already gone past the end date
+        if start_date < end_date:
+            print(f"\n{'='*60}")
+            print(f"Already completed! Start date ({start_date.strftime('%Y-%m-%d')}) is before end date ({end_date.strftime('%Y-%m-%d')})")
+            print(f"All PDFs from {end_date.strftime('%Y-%m-%d')} onwards have been processed.")
+            print(f"{'='*60}\n")
+            return
         
         current_date = start_date
         total_uploaded = 0
@@ -325,7 +333,7 @@ if __name__ == "__main__":
     
     # Date range configuration - START from TODAY, go BACK to 2007
     START_DATE = datetime.now()  # Start from today
-    END_DATE = datetime(2007, 6, 2)  # Go back to earliest date
+    END_DATE = datetime(2007, 6, 1)  # Go back to earliest date (June 1, 2007)
     
     # Allow command line arguments for date range
     if len(sys.argv) >= 2:
