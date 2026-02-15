@@ -330,6 +330,7 @@ if __name__ == "__main__":
     MAX_DAYS_PER_RUN = int(os.getenv("MAX_DAYS_PER_RUN", "5000"))
     MAX_RUNTIME_MINUTES = int(os.getenv("MAX_RUNTIME_MINUTES", "330"))
     USE_CHECKPOINT = os.getenv("USE_CHECKPOINT", "1") == "1"
+    SCRAPE_MODE = os.getenv("SCRAPE_MODE", "checkpoint")  # 'monthly' or 'checkpoint'
     
     # Date range configuration - START from TODAY, go BACK to 2007
     START_DATE = datetime.now()  # Start from today
@@ -351,6 +352,7 @@ if __name__ == "__main__":
     print(f"Initializing PDF scraper...")
     print(f"S3 Bucket: {BUCKET_NAME}")
     print(f"AWS Access Key: {AWS_ACCESS_KEY[:4]}...{AWS_ACCESS_KEY[-4:]}")
+    print(f"Scrape Mode: {SCRAPE_MODE}")
     
     # Initialize scraper
     scraper = AljaridaPDFScraper(
@@ -359,13 +361,30 @@ if __name__ == "__main__":
         bucket_name=BUCKET_NAME
     )
     
-    # Resume from checkpoint if enabled and no explicit start date
-    # For backwards scraping, checkpoint is the oldest date we've reached
-    if USE_CHECKPOINT and len(sys.argv) < 2:
-        checkpoint_date = scraper.get_last_checkpoint_date()
-        if checkpoint_date:
-            START_DATE = checkpoint_date - timedelta(days=1)  # Go one day earlier
-            print(f"Resuming from checkpoint (going backwards): {START_DATE.strftime('%Y-%m-%d')}")
+    # Handle different scrape modes if no explicit dates provided
+    if len(sys.argv) < 2:
+        if SCRAPE_MODE == "monthly":
+            # Calculate previous month range
+            today = datetime.now()
+            # Get first day of current month, then subtract one day to get last day of previous month
+            first_day_current_month = today.replace(day=1)
+            last_day_previous_month = first_day_current_month - timedelta(days=1)
+            first_day_previous_month = last_day_previous_month.replace(day=1)
+            
+            START_DATE = last_day_previous_month
+            END_DATE = first_day_previous_month
+            
+            print(f"\n{'='*60}")
+            print(f"MONTHLY MODE: Scraping previous month")
+            print(f"Previous month: {last_day_previous_month.strftime('%B %Y')}")
+            print(f"Date range: {first_day_previous_month.strftime('%Y-%m-%d')} to {last_day_previous_month.strftime('%Y-%m-%d')}")
+            print(f"{'='*60}\n")
+        elif USE_CHECKPOINT:
+            # Resume from checkpoint if enabled
+            checkpoint_date = scraper.get_last_checkpoint_date()
+            if checkpoint_date:
+                START_DATE = checkpoint_date - timedelta(days=1)  # Go one day earlier
+                print(f"Resuming from checkpoint (going backwards): {START_DATE.strftime('%Y-%m-%d')}")
     
     # Run scraper
     scraper.scrape_and_upload(

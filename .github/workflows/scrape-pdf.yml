@@ -13,9 +13,9 @@ on:
         required: false
         default: '2007-06-02'
   
-  # Schedule to run daily at 3 AM UTC (optional - runs PDFs after articles)
-  # schedule:
-  #   - cron: '0 3 * * *'
+  # Schedule to run on day 3 of every month at 3 AM UTC
+  schedule:
+    - cron: '0 3 3 * *'  # At 03:00 on day 3 of every month
 
 jobs:
   scrape-pdf:
@@ -63,6 +63,7 @@ jobs:
           MAX_DAYS_PER_RUN: 5000
           MAX_RUNTIME_MINUTES: 330
           USE_CHECKPOINT: 1
+          SCRAPE_MODE: ${{ github.event_name == 'schedule' && 'monthly' || 'checkpoint' }}
         run: |
           if [ -n "${{ github.event.inputs.start_date }}" ] && [ -n "${{ github.event.inputs.end_date }}" ]; then
             python pdf_scraper.py "${{ github.event.inputs.start_date }}" "${{ github.event.inputs.end_date }}"
